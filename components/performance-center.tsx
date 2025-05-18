@@ -300,30 +300,32 @@ export default function PerformanceCenter() {
               </Select>
             </div>
 
-            <div className="space-y-2">
-              <Label>Morningstar Ratings</Label>
-              <RadioGroup
-                defaultValue="all"
-                className="flex space-x-4"
-                onValueChange={(value) => setMorningstarRatingFilter(value)}
-              >
-                <div className="flex items-center space-x-2">
-                  <RadioGroupItem value="all" id="all" />
-                  <Label htmlFor="all">All</Label>
-                </div>
-                <div className="flex items-center space-x-2">
-                  <RadioGroupItem value="5" id="5-stars" />
-                  <Label htmlFor="5-stars">5 stars</Label>
-                </div>
-                <div className="flex items-center space-x-2">
-                  <RadioGroupItem value="4" id="4-plus-stars" />
-                  <Label htmlFor="4-plus-stars">4+ stars</Label>
-                </div>
-                <div className="flex items-center space-x-2">
-                  <RadioGroupItem value="3" id="3-plus-stars" />
-                  <Label htmlFor="3-plus-stars">3+ stars</Label>
-                </div>
-              </RadioGroup>
+            <div className="space-y-2 flex flex-col">
+              <Label className="mb-2">Morningstar Ratings</Label>
+              <div className="h-10 flex items-center">
+                <RadioGroup
+                  defaultValue="all"
+                  className="flex space-x-4"
+                  onValueChange={(value) => setMorningstarRatingFilter(value)}
+                >
+                  <div className="flex items-center space-x-2">
+                    <RadioGroupItem value="all" id="all" />
+                    <Label htmlFor="all">All</Label>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <RadioGroupItem value="5" id="5-stars" />
+                    <Label htmlFor="5-stars">5 stars</Label>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <RadioGroupItem value="4" id="4-plus-stars" />
+                    <Label htmlFor="4-plus-stars">4+ stars</Label>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <RadioGroupItem value="3" id="3-plus-stars" />
+                    <Label htmlFor="3-plus-stars">3+ stars</Label>
+                  </div>
+                </RadioGroup>
+              </div>
             </div>
 
             <div className="space-y-2">
