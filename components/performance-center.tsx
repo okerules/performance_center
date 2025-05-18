@@ -8,6 +8,14 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
 import { Label } from "@/components/ui/label"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { StarRating } from "@/components/star-rating"
+import { Unbounded } from "next/font/google"
+
+// Initialize the Unbounded font
+const unbounded = Unbounded({
+  subsets: ["latin"],
+  weight: ["400", "700"],
+  display: "swap",
+})
 
 // Mock data structure with portfolio managers
 const assetCategories = [
@@ -250,7 +258,11 @@ export default function PerformanceCenter() {
 
   return (
     <div className="container mx-auto py-8 px-4">
-      <h1 className="text-3xl font-bold mb-8 text-center md:text-left">Performance Center</h1>
+      <div className="w-full mb-8 py-6 px-4 bg-[#1158c9] rounded-md">
+        <h1 className={`text-3xl font-bold text-[#f06d22] text-center md:text-left ${unbounded.className}`}>
+          Performance Center
+        </h1>
+      </div>
 
       {/* Filters */}
       <Card className="mb-8">
