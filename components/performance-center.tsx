@@ -1,12 +1,14 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { ChevronDown, ChevronUp } from "lucide-react"
+import { ChevronDown, ChevronUp, Download } from "lucide-react"
 import { Card, CardContent } from "@/components/ui/card"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
 import { Label } from "@/components/ui/label"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
+import { Checkbox } from "@/components/ui/checkbox"
+import { Button } from "@/components/ui/button"
 import { StarRating } from "@/components/star-rating"
 import { Unbounded } from "next/font/google"
 
@@ -195,6 +197,10 @@ export default function PerformanceCenter() {
   const [morningstarRatingFilter, setMorningstarRatingFilter] = useState("all")
   const [portfolioManagerFilter, setPortfolioManagerFilter] = useState("All")
 
+  // Table visibility state
+  const [showStandardized, setShowStandardized] = useState(true)
+  const [showNonStandardized, setShowNonStandardized] = useState(true)
+
   useEffect(() => {
     // Apply filters
     let result = [...assetCategories]
@@ -254,6 +260,161 @@ export default function PerformanceCenter() {
 
   const formatPercent = (value: number) => {
     return `${value.toFixed(2)}%`
+  }
+
+  // Function to generate CSV data from the filtered categories
+  const generateCSV = () => {
+    // Define headers
+    const headers = [
+      "Asset Category",
+      "Fund Name",
+      "Fund Number",
+      "Morningstar Category",
+      "Morningstar Rating",
+      "Gross Expense Ratio",
+      "Net Expense Ratio",
+      "YTD Return",
+      "1-Year Return",
+      "3-Year Return",
+      "5-Year Return",
+      "10-Year Return",
+      "Since Inception Return",
+      "Portfolio Managers",
+    ]
+
+    // Create CSV rows
+    let csvContent = headers.join(",") + "\n"
+
+    // Add data rows
+    filteredCategories.forEach((category) => {
+      category.funds.forEach((fund) => {
+        const row = [
+          category.name,
+          fund.name,
+          fund.number,
+          fund.morningStar.category,
+          fund.morningStar.rating,
+          fund.expense.gross.toFixed(2) + "%",
+          fund.expense.net.toFixed(2) + "%",
+          fund.returns.ytd.toFixed(2) + "%",
+          fund.returns.year1.toFixed(2) + "%",
+          fund.returns.year3.toFixed(2) + "%",
+          fund.returns.year5.toFixed(2) + "%",
+          fund.returns.year10.toFixed(2) + "%",
+          fund.returns.sinceInception.toFixed(2) + "%",
+          fund.portfolioManagers.join("; "),
+        ]
+
+        // Escape any commas in the data
+        const escapedRow = row.map((field) => {
+          // If the field contains a comma, quote it
+          if (field.includes(",")) {
+            return `"${field}"`
+          }
+          return field
+        })
+
+        csvContent += escapedRow.join(",") + "\n"
+      })
+    })
+
+    return csvContent
+  }
+
+  // Function to download CSV
+  const downloadCSV = () => {
+    const csv = generateCSV()
+    const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" })
+    const url = URL.createObjectURL(blob)
+    const link = document.createElement("a")
+    link.setAttribute("href", url)
+    link.setAttribute("download", "performance_data.csv")
+    link.style.visibility = "hidden"
+    document.body.appendChild(link)
+    link.click()
+    document.body.removeChild(link)
+  }
+
+  // Function to render a performance table
+  const renderPerformanceTable = (isStandardized: boolean) => {
+    return (
+      <div className="overflow-x-auto mb-8">
+        <h2 className="text-xl font-semibold mb-3">
+          {isStandardized ? "Standardized Returns" : "Non-Standardized Returns"}
+        </h2>
+        <Table className="border">
+          <TableHeader>
+            <TableRow className="bg-muted/50">
+              <TableHead className="w-[250px]">Sub-Account</TableHead>
+              <TableHead>Morningstar Category</TableHead>
+              <TableHead>Morningstar Rating</TableHead>
+              <TableHead>
+                <div>Expense Ratio</div>
+                <div className="flex text-xs font-normal">
+                  <span className="w-1/2">Gross</span>
+                  <span className="w-1/2">Net</span>
+                </div>
+              </TableHead>
+              <TableHead>YTD Return</TableHead>
+              <TableHead>1-Year</TableHead>
+              <TableHead className="hidden md:table-cell">3-Year</TableHead>
+              <TableHead className="hidden md:table-cell">5-Year</TableHead>
+              <TableHead className="hidden lg:table-cell">10-Year</TableHead>
+              <TableHead className="hidden lg:table-cell">Since Inception</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {filteredCategories.map((category) => (
+              <>
+                <TableRow
+                  key={category.id}
+                  className="bg-muted/20 cursor-pointer hover:bg-muted/30"
+                  onClick={() => toggleCategory(category.id)}
+                >
+                  <TableCell colSpan={10} className="font-medium">
+                    <div className="flex items-center">
+                      {category.expanded ? (
+                        <ChevronUp className="mr-2 h-4 w-4" />
+                      ) : (
+                        <ChevronDown className="mr-2 h-4 w-4" />
+                      )}
+                      {category.name} ({category.funds.length})
+                    </div>
+                  </TableCell>
+                </TableRow>
+                {category.expanded &&
+                  category.funds.map((fund) => (
+                    <TableRow key={fund.id}>
+                      <TableCell>
+                        <div className="font-medium">{fund.name}</div>
+                        <div className="text-xs text-muted-foreground">{fund.number}</div>
+                      </TableCell>
+                      <TableCell>{fund.morningStar.category}</TableCell>
+                      <TableCell>
+                        <StarRating rating={fund.morningStar.rating} />
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex text-sm">
+                          <span className="w-1/2">{fund.expense.gross}%</span>
+                          <span className="w-1/2">{fund.expense.net}%</span>
+                        </div>
+                      </TableCell>
+                      <TableCell>{formatPercent(fund.returns.ytd)}</TableCell>
+                      <TableCell>{formatPercent(fund.returns.year1)}</TableCell>
+                      <TableCell className="hidden md:table-cell">{formatPercent(fund.returns.year3)}</TableCell>
+                      <TableCell className="hidden md:table-cell">{formatPercent(fund.returns.year5)}</TableCell>
+                      <TableCell className="hidden lg:table-cell">{formatPercent(fund.returns.year10)}</TableCell>
+                      <TableCell className="hidden lg:table-cell">
+                        {formatPercent(fund.returns.sinceInception)}
+                      </TableCell>
+                    </TableRow>
+                  ))}
+              </>
+            ))}
+          </TableBody>
+        </Table>
+      </div>
+    )
   }
 
   return (
@@ -347,80 +508,40 @@ export default function PerformanceCenter() {
         </CardContent>
       </Card>
 
-      {/* Performance Table */}
-      <div className="overflow-x-auto">
-        <Table className="border">
-          <TableHeader>
-            <TableRow className="bg-muted/50">
-              <TableHead className="w-[250px]">Sub-Account</TableHead>
-              <TableHead>Morningstar Category</TableHead>
-              <TableHead>Morningstar Rating</TableHead>
-              <TableHead>
-                <div>Expense Ratio</div>
-                <div className="flex text-xs font-normal">
-                  <span className="w-1/2">Gross</span>
-                  <span className="w-1/2">Net</span>
-                </div>
-              </TableHead>
-              <TableHead>YTD Return</TableHead>
-              <TableHead>1-Year</TableHead>
-              <TableHead className="hidden md:table-cell">3-Year</TableHead>
-              <TableHead className="hidden md:table-cell">5-Year</TableHead>
-              <TableHead className="hidden lg:table-cell">10-Year</TableHead>
-              <TableHead className="hidden lg:table-cell">Since Inception</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {filteredCategories.map((category) => (
-              <>
-                <TableRow
-                  key={category.id}
-                  className="bg-muted/20 cursor-pointer hover:bg-muted/30"
-                  onClick={() => toggleCategory(category.id)}
-                >
-                  <TableCell colSpan={10} className="font-medium">
-                    <div className="flex items-center">
-                      {category.expanded ? (
-                        <ChevronUp className="mr-2 h-4 w-4" />
-                      ) : (
-                        <ChevronDown className="mr-2 h-4 w-4" />
-                      )}
-                      {category.name} ({category.funds.length})
-                    </div>
-                  </TableCell>
-                </TableRow>
-                {category.expanded &&
-                  category.funds.map((fund) => (
-                    <TableRow key={fund.id}>
-                      <TableCell>
-                        <div className="font-medium">{fund.name}</div>
-                        <div className="text-xs text-muted-foreground">{fund.number}</div>
-                      </TableCell>
-                      <TableCell>{fund.morningStar.category}</TableCell>
-                      <TableCell>
-                        <StarRating rating={fund.morningStar.rating} />
-                      </TableCell>
-                      <TableCell>
-                        <div className="flex text-sm">
-                          <span className="w-1/2">{fund.expense.gross}%</span>
-                          <span className="w-1/2">{fund.expense.net}%</span>
-                        </div>
-                      </TableCell>
-                      <TableCell>{formatPercent(fund.returns.ytd)}</TableCell>
-                      <TableCell>{formatPercent(fund.returns.year1)}</TableCell>
-                      <TableCell className="hidden md:table-cell">{formatPercent(fund.returns.year3)}</TableCell>
-                      <TableCell className="hidden md:table-cell">{formatPercent(fund.returns.year5)}</TableCell>
-                      <TableCell className="hidden lg:table-cell">{formatPercent(fund.returns.year10)}</TableCell>
-                      <TableCell className="hidden lg:table-cell">
-                        {formatPercent(fund.returns.sinceInception)}
-                      </TableCell>
-                    </TableRow>
-                  ))}
-              </>
-            ))}
-          </TableBody>
-        </Table>
+      {/* Table Type Filter and Export Button */}
+      <div className="mb-6 flex justify-between items-center">
+        <div>
+          <h3 className="text-lg font-medium mb-2">Return Type</h3>
+          <div className="flex space-x-6">
+            <div className="flex items-center space-x-2">
+              <Checkbox
+                id="standardized"
+                checked={showStandardized}
+                onCheckedChange={(checked) => setShowStandardized(checked as boolean)}
+              />
+              <Label htmlFor="standardized">Standardized</Label>
+            </div>
+            <div className="flex items-center space-x-2">
+              <Checkbox
+                id="non-standardized"
+                checked={showNonStandardized}
+                onCheckedChange={(checked) => setShowNonStandardized(checked as boolean)}
+              />
+              <Label htmlFor="non-standardized">Non-Standardized</Label>
+            </div>
+          </div>
+        </div>
+        <div>
+          <Button onClick={downloadCSV} className="flex items-center gap-2">
+            <Download className="h-4 w-4" />
+            Export CSV
+          </Button>
+        </div>
       </div>
+
+      {/* Performance Tables */}
+      {showStandardized && renderPerformanceTable(true)}
+      {showNonStandardized && renderPerformanceTable(false)}
 
       <div className="mt-4 text-sm text-muted-foreground">
         <p>Performance data as of 04/30/2025. Past performance is not a guarantee of future results.</p>
