@@ -293,7 +293,7 @@ export default function PerformanceCenter() {
           fund.name,
           fund.number,
           fund.morningStar.category,
-          fund.morningStar.rating,
+          fund.morningStar.rating.toString(),
           fund.expense.gross.toFixed(2) + "%",
           fund.expense.net.toFixed(2) + "%",
           fund.returns.ytd.toFixed(2) + "%",
@@ -307,11 +307,12 @@ export default function PerformanceCenter() {
 
         // Escape any commas in the data
         const escapedRow = row.map((field) => {
-          // If the field contains a comma, quote it
-          if (field.includes(",")) {
-            return `"${field}"`
+          // Convert field to string and check if it contains a comma
+          const stringField = String(field)
+          if (stringField.includes(",")) {
+            return `"${stringField}"`
           }
-          return field
+          return stringField
         })
 
         csvContent += escapedRow.join(",") + "\n"
