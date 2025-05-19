@@ -420,7 +420,7 @@ export default function PerformanceCenter() {
 
   return (
     <div className="container mx-auto py-8 px-4">
-      <div className="w-full mb-8 py-6 px-4 bg-[#1158c9] rounded-md">
+      <div className="w-full mb-8 py-6 px-4 bg-[#1e3869] rounded-md">
         <h1 className={`text-3xl font-bold text-[#f06d22] text-center md:text-left ${unbounded.className}`}>
           Performance Center
         </h1>
