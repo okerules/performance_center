@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, Fragment } from "react"
 import { ChevronDown, ChevronUp, Download } from "lucide-react"
 import { Card, CardContent } from "@/components/ui/card"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
@@ -19,7 +19,7 @@ const unbounded = Unbounded({
   display: "swap",
 })
 
-// Mock data structure with portfolio managers
+// Mock data structure with portfolio managers and separate standardized/non-standardized returns
 const assetCategories = [
   {
     id: 1,
@@ -39,7 +39,22 @@ const assetCategories = [
           gross: 0.85,
           net: 0.75,
         },
-        returns: {
+        surrenderCharges: {
+          year1: 5.0,
+          year3: 4.0,
+          year5: 3.0,
+          year7: 2.0,
+          year9: 1.0,
+        },
+        standardizedReturns: {
+          ytd: 11.25,
+          year1: 13.82,
+          year3: 9.11,
+          year5: 8.97,
+          year10: 8.12,
+          sinceInception: 10.33,
+        },
+        nonStandardizedReturns: {
           ytd: 12.45,
           year1: 15.32,
           year3: 10.21,
@@ -61,7 +76,22 @@ const assetCategories = [
           gross: 0.92,
           net: 0.82,
         },
-        returns: {
+        surrenderCharges: {
+          year1: 5.0,
+          year3: 4.0,
+          year5: 3.0,
+          year7: 2.0,
+          year9: 1.0,
+        },
+        standardizedReturns: {
+          ytd: 7.85,
+          year1: 10.12,
+          year3: 7.91,
+          year5: 6.85,
+          year10: 6.42,
+          sinceInception: 9.07,
+        },
+        nonStandardizedReturns: {
           ytd: 8.75,
           year1: 11.42,
           year3: 8.91,
@@ -90,7 +120,22 @@ const assetCategories = [
           gross: 0.65,
           net: 0.55,
         },
-        returns: {
+        surrenderCharges: {
+          year1: 4.0,
+          year3: 3.0,
+          year5: 2.0,
+          year7: 1.0,
+          year9: 0.5,
+        },
+        standardizedReturns: {
+          ytd: 2.75,
+          year1: 3.42,
+          year3: 3.31,
+          year5: 3.15,
+          year10: 2.92,
+          sinceInception: 4.27,
+        },
+        nonStandardizedReturns: {
           ytd: 3.25,
           year1: 4.12,
           year3: 3.91,
@@ -112,7 +157,22 @@ const assetCategories = [
           gross: 0.78,
           net: 0.68,
         },
-        returns: {
+        surrenderCharges: {
+          year1: 4.0,
+          year3: 3.0,
+          year5: 2.0,
+          year7: 1.0,
+          year9: 0.5,
+        },
+        standardizedReturns: {
+          ytd: 4.95,
+          year1: 6.52,
+          year3: 5.41,
+          year5: 5.17,
+          year10: 4.72,
+          sinceInception: 5.33,
+        },
+        nonStandardizedReturns: {
           ytd: 5.75,
           year1: 7.42,
           year3: 6.21,
@@ -141,7 +201,22 @@ const assetCategories = [
           gross: 0.95,
           net: 0.85,
         },
-        returns: {
+        surrenderCharges: {
+          year1: 5.5,
+          year3: 4.5,
+          year5: 3.5,
+          year7: 2.5,
+          year9: 1.5,
+        },
+        standardizedReturns: {
+          ytd: 6.35,
+          year1: 8.02,
+          year3: 7.01,
+          year5: 6.35,
+          year10: 6.12,
+          sinceInception: 7.57,
+        },
+        nonStandardizedReturns: {
           ytd: 7.25,
           year1: 9.12,
           year3: 7.91,
@@ -163,7 +238,22 @@ const assetCategories = [
           gross: 0.98,
           net: 0.88,
         },
-        returns: {
+        surrenderCharges: {
+          year1: 5.5,
+          year3: 4.5,
+          year5: 3.5,
+          year7: 2.5,
+          year9: 1.5,
+        },
+        standardizedReturns: {
+          ytd: 3.95,
+          year1: 5.52,
+          year3: 4.41,
+          year5: 4.17,
+          year10: 3.72,
+          sinceInception: 5.13,
+        },
+        nonStandardizedReturns: {
           ytd: 4.75,
           year1: 6.42,
           year3: 5.21,
@@ -273,12 +363,18 @@ export default function PerformanceCenter() {
       "Morningstar Rating",
       "Gross Expense Ratio",
       "Net Expense Ratio",
-      "YTD Return",
-      "1-Year Return",
-      "3-Year Return",
-      "5-Year Return",
-      "10-Year Return",
-      "Since Inception Return",
+      "Standardized YTD Return",
+      "Standardized 1-Year Return",
+      "Standardized 3-Year Return",
+      "Standardized 5-Year Return",
+      "Standardized 10-Year Return",
+      "Standardized Since Inception Return",
+      "Non-Standardized YTD Return",
+      "Non-Standardized 1-Year Return",
+      "Non-Standardized 3-Year Return",
+      "Non-Standardized 5-Year Return",
+      "Non-Standardized 10-Year Return",
+      "Non-Standardized Since Inception Return",
       "Portfolio Managers",
     ]
 
@@ -296,12 +392,18 @@ export default function PerformanceCenter() {
           fund.morningStar.rating.toString(),
           fund.expense.gross.toFixed(2) + "%",
           fund.expense.net.toFixed(2) + "%",
-          fund.returns.ytd.toFixed(2) + "%",
-          fund.returns.year1.toFixed(2) + "%",
-          fund.returns.year3.toFixed(2) + "%",
-          fund.returns.year5.toFixed(2) + "%",
-          fund.returns.year10.toFixed(2) + "%",
-          fund.returns.sinceInception.toFixed(2) + "%",
+          fund.standardizedReturns.ytd.toFixed(2) + "%",
+          fund.standardizedReturns.year1.toFixed(2) + "%",
+          fund.standardizedReturns.year3.toFixed(2) + "%",
+          fund.standardizedReturns.year5.toFixed(2) + "%",
+          fund.standardizedReturns.year10.toFixed(2) + "%",
+          fund.standardizedReturns.sinceInception.toFixed(2) + "%",
+          fund.nonStandardizedReturns.ytd.toFixed(2) + "%",
+          fund.nonStandardizedReturns.year1.toFixed(2) + "%",
+          fund.nonStandardizedReturns.year3.toFixed(2) + "%",
+          fund.nonStandardizedReturns.year5.toFixed(2) + "%",
+          fund.nonStandardizedReturns.year10.toFixed(2) + "%",
+          fund.nonStandardizedReturns.sinceInception.toFixed(2) + "%",
           fund.portfolioManagers.join("; "),
         ]
 
@@ -341,7 +443,9 @@ export default function PerformanceCenter() {
     return (
       <div className="overflow-x-auto mb-8">
         <h2 className="text-xl font-semibold mb-3">
-          {isStandardized ? "Standardized Returns" : "Non-Standardized Returns"}
+          {isStandardized
+            ? "Standardized Returns (Including Surrender Charges)"
+            : "Non-Standardized Returns (Excluding Surrender Charges)"}
         </h2>
         <Table className="border">
           <TableHeader>
@@ -366,9 +470,8 @@ export default function PerformanceCenter() {
           </TableHeader>
           <TableBody>
             {filteredCategories.map((category) => (
-              <>
+              <Fragment key={`category-${category.id}`}>
                 <TableRow
-                  key={category.id}
                   className="bg-muted/20 cursor-pointer hover:bg-muted/30"
                   onClick={() => toggleCategory(category.id)}
                 >
@@ -385,7 +488,7 @@ export default function PerformanceCenter() {
                 </TableRow>
                 {category.expanded &&
                   category.funds.map((fund) => (
-                    <TableRow key={fund.id}>
+                    <TableRow key={`fund-${fund.id}`}>
                       <TableCell>
                         <div className="font-medium">{fund.name}</div>
                         <div className="text-xs text-muted-foreground">{fund.number}</div>
@@ -400,17 +503,39 @@ export default function PerformanceCenter() {
                           <span className="w-1/2">{fund.expense.net}%</span>
                         </div>
                       </TableCell>
-                      <TableCell>{formatPercent(fund.returns.ytd)}</TableCell>
-                      <TableCell>{formatPercent(fund.returns.year1)}</TableCell>
-                      <TableCell className="hidden md:table-cell">{formatPercent(fund.returns.year3)}</TableCell>
-                      <TableCell className="hidden md:table-cell">{formatPercent(fund.returns.year5)}</TableCell>
-                      <TableCell className="hidden lg:table-cell">{formatPercent(fund.returns.year10)}</TableCell>
+                      <TableCell>
+                        {formatPercent(isStandardized ? fund.standardizedReturns.ytd : fund.nonStandardizedReturns.ytd)}
+                      </TableCell>
+                      <TableCell>
+                        {formatPercent(
+                          isStandardized ? fund.standardizedReturns.year1 : fund.nonStandardizedReturns.year1,
+                        )}
+                      </TableCell>
+                      <TableCell className="hidden md:table-cell">
+                        {formatPercent(
+                          isStandardized ? fund.standardizedReturns.year3 : fund.nonStandardizedReturns.year3,
+                        )}
+                      </TableCell>
+                      <TableCell className="hidden md:table-cell">
+                        {formatPercent(
+                          isStandardized ? fund.standardizedReturns.year5 : fund.nonStandardizedReturns.year5,
+                        )}
+                      </TableCell>
                       <TableCell className="hidden lg:table-cell">
-                        {formatPercent(fund.returns.sinceInception)}
+                        {formatPercent(
+                          isStandardized ? fund.standardizedReturns.year10 : fund.nonStandardizedReturns.year10,
+                        )}
+                      </TableCell>
+                      <TableCell className="hidden lg:table-cell">
+                        {formatPercent(
+                          isStandardized
+                            ? fund.standardizedReturns.sinceInception
+                            : fund.nonStandardizedReturns.sinceInception,
+                        )}
                       </TableCell>
                     </TableRow>
                   ))}
-              </>
+              </Fragment>
             ))}
           </TableBody>
         </Table>
@@ -546,6 +671,14 @@ export default function PerformanceCenter() {
 
       <div className="mt-4 text-sm text-muted-foreground">
         <p>Performance data as of 04/30/2025. Past performance is not a guarantee of future results.</p>
+        <p className="mt-2">
+          <strong>Standardized Returns:</strong> Include the effect of applicable surrender charges (contingent deferred
+          sales charges) that would apply if you terminated your contract at the end of the applicable time period.
+        </p>
+        <p className="mt-1">
+          <strong>Non-Standardized Returns:</strong> Do not include the effect of surrender charges. If surrender
+          charges were included, returns would be lower.
+        </p>
       </div>
     </div>
   )
