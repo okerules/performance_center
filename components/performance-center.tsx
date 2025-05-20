@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useEffect, Fragment } from "react"
-import { ChevronDown, ChevronUp, Download } from "lucide-react"
+import { ChevronDown, ChevronUp, Download, Filter, X } from "lucide-react"
 import { Card, CardContent } from "@/components/ui/card"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
@@ -11,6 +11,7 @@ import { Checkbox } from "@/components/ui/checkbox"
 import { Button } from "@/components/ui/button"
 import { StarRating } from "@/components/star-rating"
 import { Unbounded } from "next/font/google"
+import { cn } from "@/lib/utils"
 
 // Initialize the Unbounded font
 const unbounded = Unbounded({
@@ -19,7 +20,36 @@ const unbounded = Unbounded({
   display: "swap",
 })
 
-// Mock data structure with portfolio managers and separate standardized/non-standardized returns
+// Mock data structure for footnotes that would come from a CMS
+const footnotes = [
+  {
+    id: 1,
+    text: "Performance shown for periods prior to the inception date of a specific fund is the performance of an older share class of the fund and has been adjusted to reflect the fees and expenses of the newer share class.",
+  },
+  {
+    id: 2,
+    text: "The fund's investment adviser has contractually agreed to waive fees and/or reimburse expenses through April 30, 2026.",
+  },
+  {
+    id: 3,
+    text: "This fund invests in securities that may be affected by market risk, interest rate risk, and credit risk. Returns may be lower due to these risks.",
+  },
+  {
+    id: 4,
+    text: "The fund is subject to special risks including volatility due to investments in small and mid-size companies and foreign securities.",
+  },
+  {
+    id: 5,
+    text: "A portion of the fund's income may be subject to federal or state income taxes or the alternative minimum tax.",
+  },
+]
+
+// Mock data for disclaimer that would come from a CMS
+const disclaimer = {
+  text: "The information contained herein: (1) is proprietary to the company and/or its content providers; (2) may not be copied or distributed; and (3) is not warranted to be accurate, complete or timely. Neither the company nor its content providers are responsible for any damages or losses arising from any use of this information. Past performance is no guarantee of future results. Investment returns and principal value will fluctuate so that shares, when redeemed, may be worth more or less than their original cost. Current performance may be lower or higher than the performance data quoted. Please visit our website for standardized performance information and to obtain a prospectus.",
+}
+
+// Mock data structure with portfolio managers, separate standardized/non-standardized returns, and footnotes
 const assetCategories = [
   {
     id: 1,
@@ -30,6 +60,7 @@ const assetCategories = [
         id: 101,
         name: "Growth Fund",
         number: "ABCDE",
+        footnotes: [1, 4], // References to footnote IDs
         portfolioManagers: ["John Smith", "Emily Williams"],
         morningStar: {
           category: "Large Growth",
@@ -67,6 +98,7 @@ const assetCategories = [
         id: 102,
         name: "Value Fund",
         number: "FGHIJ",
+        footnotes: [2, 5], // References to footnote IDs
         portfolioManagers: ["Jane Doe"],
         morningStar: {
           category: "Large Value",
@@ -111,6 +143,7 @@ const assetCategories = [
         id: 201,
         name: "Bond Fund",
         number: "KLMNO",
+        footnotes: [3], // References to footnote IDs
         portfolioManagers: ["Robert Johnson", "Jane Doe"],
         morningStar: {
           category: "Intermediate Core Bond",
@@ -148,6 +181,7 @@ const assetCategories = [
         id: 202,
         name: "High Yield Fund",
         number: "PQRST",
+        footnotes: [2, 3], // References to footnote IDs
         portfolioManagers: ["Robert Johnson"],
         morningStar: {
           category: "High Yield Bond",
@@ -192,6 +226,7 @@ const assetCategories = [
         id: 301,
         name: "Real Estate Fund",
         number: "UVWXY",
+        footnotes: [1, 4, 5], // References to footnote IDs
         portfolioManagers: ["Emily Williams"],
         morningStar: {
           category: "Real Estate",
@@ -229,6 +264,7 @@ const assetCategories = [
         id: 302,
         name: "Commodities Fund",
         number: "ZABCD",
+        footnotes: [3, 4], // References to footnote IDs
         portfolioManagers: ["John Smith", "Robert Johnson"],
         morningStar: {
           category: "Commodities",
@@ -286,10 +322,29 @@ export default function PerformanceCenter() {
   const [morningstarCategoryFilter, setMorningstarCategoryFilter] = useState("All")
   const [morningstarRatingFilter, setMorningstarRatingFilter] = useState("all")
   const [portfolioManagerFilter, setPortfolioManagerFilter] = useState("All")
+  const [showFilters, setShowFilters] = useState(false)
 
   // Table visibility state
   const [showStandardized, setShowStandardized] = useState(true)
   const [showNonStandardized, setShowNonStandardized] = useState(true)
+
+  // Track which footnotes are actually used in the filtered data
+  const [activeFootnotes, setActiveFootnotes] = useState<number[]>([])
+
+  // Check if any filters are active
+  const hasActiveFilters =
+    assetCategoryFilter !== "All" ||
+    morningstarCategoryFilter !== "All" ||
+    morningstarRatingFilter !== "all" ||
+    portfolioManagerFilter !== "All"
+
+  // Reset all filters
+  const resetFilters = () => {
+    setAssetCategoryFilter("All")
+    setMorningstarCategoryFilter("All")
+    setMorningstarRatingFilter("all")
+    setPortfolioManagerFilter("All")
+  }
 
   useEffect(() => {
     // Apply filters
@@ -331,6 +386,21 @@ export default function PerformanceCenter() {
     result = result.filter((category) => category.funds.length > 0)
 
     setFilteredCategories(result)
+
+    // Update active footnotes based on filtered data
+    const usedFootnotes: number[] = []
+    result.forEach((category) => {
+      category.funds.forEach((fund) => {
+        if (fund.footnotes) {
+          fund.footnotes.forEach((footnoteId) => {
+            if (!usedFootnotes.includes(footnoteId)) {
+              usedFootnotes.push(footnoteId)
+            }
+          })
+        }
+      })
+    })
+    setActiveFootnotes(usedFootnotes.sort((a, b) => a - b))
   }, [assetCategoryFilter, morningstarCategoryFilter, morningstarRatingFilter, portfolioManagerFilter])
 
   const toggleCategory = (categoryId: number) => {
@@ -376,6 +446,7 @@ export default function PerformanceCenter() {
       "Non-Standardized 10-Year Return",
       "Non-Standardized Since Inception Return",
       "Portfolio Managers",
+      "Footnotes",
     ]
 
     // Create CSV rows
@@ -384,6 +455,8 @@ export default function PerformanceCenter() {
     // Add data rows
     filteredCategories.forEach((category) => {
       category.funds.forEach((fund) => {
+        const footnoteText = fund.footnotes ? fund.footnotes.join(", ") : ""
+
         const row = [
           category.name,
           fund.name,
@@ -405,6 +478,7 @@ export default function PerformanceCenter() {
           fund.nonStandardizedReturns.year10.toFixed(2) + "%",
           fund.nonStandardizedReturns.sinceInception.toFixed(2) + "%",
           fund.portfolioManagers.join("; "),
+          footnoteText,
         ]
 
         // Escape any commas in the data
@@ -438,248 +512,454 @@ export default function PerformanceCenter() {
     document.body.removeChild(link)
   }
 
+  // Function to render footnote superscripts
+  const renderFootnotes = (footnoteIds: number[] | undefined) => {
+    if (!footnoteIds || footnoteIds.length === 0) return null
+
+    return (
+      <span className="align-super text-xs ml-1" aria-hidden="true">
+        {footnoteIds.map((id, index) => (
+          <Fragment key={id}>
+            <a href={`#footnote-${id}`} className="text-primary font-medium no-underline">
+              {id}
+            </a>
+            {index < footnoteIds.length - 1 ? "," : ""}
+          </Fragment>
+        ))}
+      </span>
+    )
+  }
+
   // Function to render a performance table
   const renderPerformanceTable = (isStandardized: boolean) => {
+    const tableId = isStandardized ? "standardized-returns-table" : "non-standardized-returns-table"
+    const tableTitle = isStandardized
+      ? "Standardized Returns (Including Surrender Charges)"
+      : "Non-Standardized Returns (Excluding Surrender Charges)"
+
     return (
-      <div className="overflow-x-auto mb-8">
-        <h2 className="text-xl font-semibold mb-3">
-          {isStandardized
-            ? "Standardized Returns (Including Surrender Charges)"
-            : "Non-Standardized Returns (Excluding Surrender Charges)"}
+      <section className="mb-8" aria-labelledby={`${tableId}-heading`}>
+        <h2 id={`${tableId}-heading`} className="text-xl font-semibold mb-3">
+          {tableTitle}
         </h2>
-        <Table className="border">
-          <TableHeader>
-            <TableRow className="bg-muted/50">
-              <TableHead className="w-[250px]">Sub-Account</TableHead>
-              <TableHead>Morningstar Category</TableHead>
-              <TableHead>Morningstar Rating</TableHead>
-              <TableHead>
-                <div>Expense Ratio</div>
-                <div className="flex text-xs font-normal">
-                  <span className="w-1/2">Gross</span>
-                  <span className="w-1/2">Net</span>
-                </div>
-              </TableHead>
-              <TableHead>YTD Return</TableHead>
-              <TableHead>1-Year</TableHead>
-              <TableHead className="hidden md:table-cell">3-Year</TableHead>
-              <TableHead className="hidden md:table-cell">5-Year</TableHead>
-              <TableHead className="hidden lg:table-cell">10-Year</TableHead>
-              <TableHead className="hidden lg:table-cell">Since Inception</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {filteredCategories.map((category) => (
-              <Fragment key={`category-${category.id}`}>
-                <TableRow
-                  className="bg-muted/20 cursor-pointer hover:bg-muted/30"
-                  onClick={() => toggleCategory(category.id)}
-                >
-                  <TableCell colSpan={10} className="font-medium">
-                    <div className="flex items-center">
-                      {category.expanded ? (
-                        <ChevronUp className="mr-2 h-4 w-4" />
-                      ) : (
-                        <ChevronDown className="mr-2 h-4 w-4" />
-                      )}
-                      {category.name} ({category.funds.length})
+        <div className="overflow-x-auto pb-2 -mx-4 px-4 sm:-mx-6 sm:px-6 md:mx-0 md:px-0">
+          <div className="min-w-[800px]">
+            <Table className="border w-full" aria-labelledby={`${tableId}-heading`}>
+              <TableHeader>
+                <TableRow className="bg-muted/50">
+                  <TableHead className="w-[250px]" scope="col">
+                    Sub-Account
+                  </TableHead>
+                  <TableHead scope="col">Morningstar Category</TableHead>
+                  <TableHead scope="col">Morningstar Rating</TableHead>
+                  <TableHead scope="col">
+                    <div>Expense Ratio</div>
+                    <div className="flex text-xs font-normal">
+                      <span className="w-1/2">Gross</span>
+                      <span className="w-1/2">Net</span>
                     </div>
-                  </TableCell>
+                  </TableHead>
+                  <TableHead scope="col">YTD Return</TableHead>
+                  <TableHead scope="col">1-Year</TableHead>
+                  <TableHead scope="col">3-Year</TableHead>
+                  <TableHead scope="col">5-Year</TableHead>
+                  <TableHead scope="col">10-Year</TableHead>
+                  <TableHead scope="col">Since Inception</TableHead>
                 </TableRow>
-                {category.expanded &&
-                  category.funds.map((fund) => (
-                    <TableRow key={`fund-${fund.id}`}>
-                      <TableCell>
-                        <div className="font-medium">{fund.name}</div>
-                        <div className="text-xs text-muted-foreground">{fund.number}</div>
-                      </TableCell>
-                      <TableCell>{fund.morningStar.category}</TableCell>
-                      <TableCell>
-                        <StarRating rating={fund.morningStar.rating} />
-                      </TableCell>
-                      <TableCell>
-                        <div className="flex text-sm">
-                          <span className="w-1/2">{fund.expense.gross}%</span>
-                          <span className="w-1/2">{fund.expense.net}%</span>
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        {formatPercent(isStandardized ? fund.standardizedReturns.ytd : fund.nonStandardizedReturns.ytd)}
-                      </TableCell>
-                      <TableCell>
-                        {formatPercent(
-                          isStandardized ? fund.standardizedReturns.year1 : fund.nonStandardizedReturns.year1,
-                        )}
-                      </TableCell>
-                      <TableCell className="hidden md:table-cell">
-                        {formatPercent(
-                          isStandardized ? fund.standardizedReturns.year3 : fund.nonStandardizedReturns.year3,
-                        )}
-                      </TableCell>
-                      <TableCell className="hidden md:table-cell">
-                        {formatPercent(
-                          isStandardized ? fund.standardizedReturns.year5 : fund.nonStandardizedReturns.year5,
-                        )}
-                      </TableCell>
-                      <TableCell className="hidden lg:table-cell">
-                        {formatPercent(
-                          isStandardized ? fund.standardizedReturns.year10 : fund.nonStandardizedReturns.year10,
-                        )}
-                      </TableCell>
-                      <TableCell className="hidden lg:table-cell">
-                        {formatPercent(
-                          isStandardized
-                            ? fund.standardizedReturns.sinceInception
-                            : fund.nonStandardizedReturns.sinceInception,
-                        )}
+              </TableHeader>
+              <TableBody>
+                {filteredCategories.map((category) => (
+                  <Fragment key={`category-${category.id}`}>
+                    <TableRow
+                      className="bg-muted/20 cursor-pointer hover:bg-muted/30"
+                      onClick={() => toggleCategory(category.id)}
+                    >
+                      <TableCell colSpan={10} className="font-medium">
+                        <button
+                          className="flex items-center w-full text-left py-2"
+                          aria-expanded={category.expanded}
+                          aria-controls={`category-${category.id}-content`}
+                        >
+                          {category.expanded ? (
+                            <ChevronUp className="mr-2 h-5 w-5" aria-hidden="true" />
+                          ) : (
+                            <ChevronDown className="mr-2 h-5 w-5" aria-hidden="true" />
+                          )}
+                          {category.name} ({category.funds.length})
+                        </button>
                       </TableCell>
                     </TableRow>
-                  ))}
-              </Fragment>
-            ))}
-          </TableBody>
-        </Table>
-      </div>
+                    {category.expanded && (
+                      <tr className="sr-only">
+                        <td>
+                          <span id={`category-${category.id}-content`}>{category.name} funds</span>
+                        </td>
+                      </tr>
+                    )}
+                    {category.expanded &&
+                      category.funds.map((fund) => (
+                        <TableRow key={`fund-${fund.id}`} aria-labelledby={`category-${category.id}-content`}>
+                          <TableCell>
+                            <div className="font-medium">
+                              {fund.name}
+                              {fund.footnotes && renderFootnotes(fund.footnotes)}
+                              {/* Screen reader accessible footnotes */}
+                              {fund.footnotes && (
+                                <span className="sr-only">
+                                  {" "}
+                                  with footnotes{" "}
+                                  {fund.footnotes.map((id) => {
+                                    const note = footnotes.find((f) => f.id === id)
+                                    return note ? `${id}: ${note.text}. ` : ""
+                                  })}
+                                </span>
+                              )}
+                            </div>
+                            <div className="text-xs text-muted-foreground">Fund Number: {fund.number}</div>
+                          </TableCell>
+                          <TableCell>{fund.morningStar.category}</TableCell>
+                          <TableCell>
+                            <div aria-label={`${fund.morningStar.rating} out of 5 stars`}>
+                              <StarRating rating={fund.morningStar.rating} />
+                            </div>
+                          </TableCell>
+                          <TableCell>
+                            <div className="flex text-sm">
+                              <span className="w-1/2">{fund.expense.gross}%</span>
+                              <span className="w-1/2">{fund.expense.net}%</span>
+                            </div>
+                          </TableCell>
+                          <TableCell>
+                            {formatPercent(
+                              isStandardized ? fund.standardizedReturns.ytd : fund.nonStandardizedReturns.ytd,
+                            )}
+                          </TableCell>
+                          <TableCell>
+                            {formatPercent(
+                              isStandardized ? fund.standardizedReturns.year1 : fund.nonStandardizedReturns.year1,
+                            )}
+                          </TableCell>
+                          <TableCell>
+                            {formatPercent(
+                              isStandardized ? fund.standardizedReturns.year3 : fund.nonStandardizedReturns.year3,
+                            )}
+                          </TableCell>
+                          <TableCell>
+                            {formatPercent(
+                              isStandardized ? fund.standardizedReturns.year5 : fund.nonStandardizedReturns.year5,
+                            )}
+                          </TableCell>
+                          <TableCell>
+                            {formatPercent(
+                              isStandardized ? fund.standardizedReturns.year10 : fund.nonStandardizedReturns.year10,
+                            )}
+                          </TableCell>
+                          <TableCell>
+                            {formatPercent(
+                              isStandardized
+                                ? fund.standardizedReturns.sinceInception
+                                : fund.nonStandardizedReturns.sinceInception,
+                            )}
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                  </Fragment>
+                ))}
+              </TableBody>
+            </Table>
+          </div>
+        </div>
+        <div className="text-xs text-muted-foreground mt-2 italic">
+          <span className="md:hidden">Swipe horizontally to view more data</span>
+        </div>
+      </section>
     )
   }
 
   return (
-    <div className="container mx-auto py-8 px-4">
-      <div className="w-full mb-8 py-6 px-4 bg-[#1e3869] rounded-md">
-        <h1 className={`text-3xl font-bold text-[#f06d22] text-center md:text-left ${unbounded.className}`}>
+    <main className="container mx-auto py-6 px-4 sm:px-6" aria-labelledby="performance-center-title">
+      <div className="w-full mb-6 py-4 sm:py-6 px-4 bg-[#1e3869] rounded-md">
+        <h1
+          id="performance-center-title"
+          className={`text-2xl sm:text-3xl font-bold text-[#f06d22] text-center md:text-left ${unbounded.className}`}
+        >
           Performance Center
         </h1>
       </div>
 
+      {/* Filters Toggle for Mobile/Tablet */}
+      <div className="md:hidden mb-4 flex justify-between items-center">
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() => setShowFilters(!showFilters)}
+          className="flex items-center gap-2"
+          aria-expanded={showFilters}
+          aria-controls="filter-panel"
+        >
+          <Filter className="h-4 w-4" />
+          {showFilters ? "Hide Filters" : "Show Filters"}
+        </Button>
+
+        {hasActiveFilters && (
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={resetFilters}
+            className="text-sm flex items-center gap-1"
+            aria-label="Reset all filters"
+          >
+            <X className="h-3 w-3" />
+            Reset
+          </Button>
+        )}
+      </div>
+
       {/* Filters */}
-      <Card className="mb-8">
-        <CardContent className="pt-6">
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-            <div className="space-y-2">
-              <Label htmlFor="asset-category">Asset Category</Label>
-              <Select defaultValue="All" onValueChange={(value) => setAssetCategoryFilter(value)}>
-                <SelectTrigger id="asset-category">
-                  <SelectValue placeholder="Select Asset Category" />
-                </SelectTrigger>
-                <SelectContent>
-                  {assetCategoryOptions.map((option) => (
-                    <SelectItem key={option} value={option}>
-                      {option}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
+      <section
+        aria-labelledby="filters-heading"
+        id="filter-panel"
+        className={cn("transition-all duration-300", {
+          "max-h-0 overflow-hidden opacity-0 md:max-h-full md:opacity-100": !showFilters && window.innerWidth < 768,
+          "max-h-[1000px] opacity-100": showFilters || window.innerWidth >= 768,
+        })}
+      >
+        <h2 id="filters-heading" className="sr-only">
+          Performance Filters
+        </h2>
+        <Card className="mb-6">
+          <CardContent className="pt-6">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
+              <div className="space-y-2">
+                <Label htmlFor="asset-category" className="text-sm font-medium">
+                  Asset Category
+                </Label>
+                <Select
+                  defaultValue="All"
+                  value={assetCategoryFilter}
+                  onValueChange={(value) => setAssetCategoryFilter(value)}
+                >
+                  <SelectTrigger id="asset-category" aria-label="Select asset category" className="h-10">
+                    <SelectValue placeholder="Select Asset Category" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {assetCategoryOptions.map((option) => (
+                      <SelectItem key={option} value={option}>
+                        {option}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="morningstar-category">Morningstar Categories</Label>
-              <Select defaultValue="All" onValueChange={(value) => setMorningstarCategoryFilter(value)}>
-                <SelectTrigger id="morningstar-category">
-                  <SelectValue placeholder="Select Morningstar Category" />
-                </SelectTrigger>
-                <SelectContent>
-                  {morningstarCategoryOptions.map((option) => (
-                    <SelectItem key={option} value={option}>
-                      {option}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
+              <div className="space-y-2">
+                <Label htmlFor="morningstar-category" className="text-sm font-medium">
+                  Morningstar Categories
+                </Label>
+                <Select
+                  defaultValue="All"
+                  value={morningstarCategoryFilter}
+                  onValueChange={(value) => setMorningstarCategoryFilter(value)}
+                >
+                  <SelectTrigger id="morningstar-category" aria-label="Select Morningstar category" className="h-10">
+                    <SelectValue placeholder="Select Morningstar Category" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {morningstarCategoryOptions.map((option) => (
+                      <SelectItem key={option} value={option}>
+                        {option}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
 
-            <div className="space-y-2 flex flex-col">
-              <Label className="mb-2">Morningstar Ratings</Label>
-              <div className="h-10 flex items-center">
+              <div className="space-y-2">
+                <Label id="morningstar-ratings-label" className="text-sm font-medium block mb-2">
+                  Morningstar Ratings
+                </Label>
                 <RadioGroup
                   defaultValue="all"
-                  className="flex space-x-4"
+                  value={morningstarRatingFilter}
+                  className="flex flex-wrap gap-x-4 gap-y-2"
                   onValueChange={(value) => setMorningstarRatingFilter(value)}
+                  aria-labelledby="morningstar-ratings-label"
                 >
                   <div className="flex items-center space-x-2">
                     <RadioGroupItem value="all" id="all" />
-                    <Label htmlFor="all">All</Label>
+                    <Label htmlFor="all" className="text-sm">
+                      All
+                    </Label>
                   </div>
                   <div className="flex items-center space-x-2">
                     <RadioGroupItem value="5" id="5-stars" />
-                    <Label htmlFor="5-stars">5 stars</Label>
+                    <Label htmlFor="5-stars" className="text-sm">
+                      5 stars
+                    </Label>
                   </div>
                   <div className="flex items-center space-x-2">
                     <RadioGroupItem value="4" id="4-plus-stars" />
-                    <Label htmlFor="4-plus-stars">4+ stars</Label>
+                    <Label htmlFor="4-plus-stars" className="text-sm">
+                      4+ stars
+                    </Label>
                   </div>
                   <div className="flex items-center space-x-2">
                     <RadioGroupItem value="3" id="3-plus-stars" />
-                    <Label htmlFor="3-plus-stars">3+ stars</Label>
+                    <Label htmlFor="3-plus-stars" className="text-sm">
+                      3+ stars
+                    </Label>
                   </div>
                 </RadioGroup>
               </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="portfolio-manager" className="text-sm font-medium">
+                  Portfolio Managers
+                </Label>
+                <Select
+                  defaultValue="All"
+                  value={portfolioManagerFilter}
+                  onValueChange={(value) => setPortfolioManagerFilter(value)}
+                >
+                  <SelectTrigger id="portfolio-manager" aria-label="Select portfolio manager" className="h-10">
+                    <SelectValue placeholder="Select Portfolio Manager" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {portfolioManagerOptions.map((option) => (
+                      <SelectItem key={option} value={option}>
+                        {option}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
             </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="portfolio-manager">Portfolio Managers</Label>
-              <Select defaultValue="All" onValueChange={(value) => setPortfolioManagerFilter(value)}>
-                <SelectTrigger id="portfolio-manager">
-                  <SelectValue placeholder="Select Portfolio Manager" />
-                </SelectTrigger>
-                <SelectContent>
-                  {portfolioManagerOptions.map((option) => (
-                    <SelectItem key={option} value={option}>
-                      {option}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+            {/* Reset Filters Button - Desktop */}
+            <div className="hidden md:flex justify-end mt-4">
+              {hasActiveFilters && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={resetFilters}
+                  className="text-sm"
+                  aria-label="Reset all filters"
+                >
+                  Reset Filters
+                </Button>
+              )}
             </div>
-          </div>
-        </CardContent>
-      </Card>
+          </CardContent>
+        </Card>
+      </section>
 
       {/* Table Type Filter and Export Button */}
-      <div className="mb-6 flex justify-between items-center">
+      <section
+        className="mb-6 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4"
+        aria-labelledby="return-type-heading"
+      >
         <div>
-          <h3 className="text-lg font-medium mb-2">Return Type</h3>
-          <div className="flex space-x-6">
+          <h3 id="return-type-heading" className="text-base sm:text-lg font-medium mb-2">
+            Return Type
+          </h3>
+          <div className="flex flex-wrap gap-x-6 gap-y-2" role="group" aria-labelledby="return-type-heading">
             <div className="flex items-center space-x-2">
               <Checkbox
                 id="standardized"
                 checked={showStandardized}
                 onCheckedChange={(checked) => setShowStandardized(checked as boolean)}
+                aria-label="Show standardized returns"
+                className="h-5 w-5"
               />
-              <Label htmlFor="standardized">Standardized</Label>
+              <Label htmlFor="standardized" className="text-sm">
+                Standardized
+              </Label>
             </div>
             <div className="flex items-center space-x-2">
               <Checkbox
                 id="non-standardized"
                 checked={showNonStandardized}
                 onCheckedChange={(checked) => setShowNonStandardized(checked as boolean)}
+                aria-label="Show non-standardized returns"
+                className="h-5 w-5"
               />
-              <Label htmlFor="non-standardized">Non-Standardized</Label>
+              <Label htmlFor="non-standardized" className="text-sm">
+                Non-Standardized
+              </Label>
             </div>
           </div>
         </div>
         <div>
-          <Button onClick={downloadCSV} className="flex items-center gap-2">
-            <Download className="h-4 w-4" />
+          <Button
+            onClick={downloadCSV}
+            className="flex items-center gap-2 h-10 px-4"
+            aria-label="Export data to CSV file"
+          >
+            <Download className="h-4 w-4" aria-hidden="true" />
             Export CSV
           </Button>
         </div>
-      </div>
+      </section>
 
       {/* Performance Tables */}
       {showStandardized && renderPerformanceTable(true)}
       {showNonStandardized && renderPerformanceTable(false)}
 
-      <div className="mt-4 text-sm text-muted-foreground">
-        <p>Performance data as of 04/30/2025. Past performance is not a guarantee of future results.</p>
-        <p className="mt-2">
-          <strong>Standardized Returns:</strong> Include the effect of applicable surrender charges (contingent deferred
-          sales charges) that would apply if you terminated your contract at the end of the applicable time period.
-        </p>
-        <p className="mt-1">
-          <strong>Non-Standardized Returns:</strong> Do not include the effect of surrender charges. If surrender
-          charges were included, returns would be lower.
-        </p>
-      </div>
-    </div>
+      {/* Generic Disclaimer and Footnotes */}
+      <footer className="mt-8 border-t pt-4" aria-label="Performance data disclaimers">
+        <div className="mb-4">
+          <p className="text-sm text-muted-foreground">
+            Performance data as of 04/30/2025. Past performance is not a guarantee of future results.
+          </p>
+          <div className="mt-2" aria-labelledby="returns-explanation">
+            <h3 id="returns-explanation" className="sr-only">
+              Returns Explanation
+            </h3>
+            <p className="text-sm text-muted-foreground">
+              <strong>Standardized Returns:</strong> Include the effect of applicable surrender charges (contingent
+              deferred sales charges) that would apply if you terminated your contract at the end of the applicable time
+              period.
+            </p>
+            <p className="mt-1 text-sm text-muted-foreground">
+              <strong>Non-Standardized Returns:</strong> Do not include the effect of surrender charges. If surrender
+              charges were included, returns would be lower.
+            </p>
+          </div>
+        </div>
+
+        {/* Dynamic Disclaimer from CMS */}
+        <div
+          className="bg-muted/20 p-3 sm:p-4 rounded-md text-sm text-muted-foreground mb-4"
+          aria-labelledby="disclaimer-heading"
+        >
+          <h3 id="disclaimer-heading" className="sr-only">
+            Legal Disclaimer
+          </h3>
+          <p className="text-sm leading-relaxed">{disclaimer.text}</p>
+        </div>
+
+        {/* Footnotes Section - now below disclaimers with matching formatting */}
+        {activeFootnotes.length > 0 && (
+          <div className="text-sm text-muted-foreground mt-4" aria-label="Footnotes">
+            {activeFootnotes.map((id) => {
+              const note = footnotes.find((f) => f.id === id)
+              if (!note) return null
+              return (
+                <div key={note.id} id={`footnote-${note.id}`} className="mb-2 flex">
+                  <span className="font-medium mr-2 flex-shrink-0">{note.id}.</span>
+                  <span className="leading-relaxed">{note.text}</span>
+                </div>
+              )
+            })}
+          </div>
+        )}
+      </footer>
+
+      {filteredCategories.length === 0 && (
+        <div className="p-6 sm:p-8 text-center border rounded-md" aria-live="polite" role="status">
+          <p>No funds match your current filter criteria. Please adjust your filters to see results.</p>
+        </div>
+      )}
+    </main>
   )
 }
