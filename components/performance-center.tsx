@@ -12,6 +12,7 @@ import { Button } from "@/components/ui/button"
 import { StarRating } from "@/components/star-rating"
 import { Unbounded } from "next/font/google"
 import { cn } from "@/lib/utils"
+import { useMediaQuery } from "@/hooks/use-media-query"
 
 // Initialize the Unbounded font
 const unbounded = Unbounded({
@@ -330,6 +331,9 @@ export default function PerformanceCenter() {
 
   // Track which footnotes are actually used in the filtered data
   const [activeFootnotes, setActiveFootnotes] = useState<number[]>([])
+
+  // Use media query hook instead of direct window access
+  const isMobile = useMediaQuery("(max-width: 768px)")
 
   // Check if any filters are active
   const hasActiveFilters =
@@ -720,8 +724,8 @@ export default function PerformanceCenter() {
         aria-labelledby="filters-heading"
         id="filter-panel"
         className={cn("transition-all duration-300", {
-          "max-h-0 overflow-hidden opacity-0 md:max-h-full md:opacity-100": !showFilters && window.innerWidth < 768,
-          "max-h-[1000px] opacity-100": showFilters || window.innerWidth >= 768,
+          "max-h-0 overflow-hidden opacity-0 md:max-h-full md:opacity-100": !showFilters && isMobile,
+          "max-h-[1000px] opacity-100": showFilters || !isMobile,
         })}
       >
         <h2 id="filters-heading" className="sr-only">
