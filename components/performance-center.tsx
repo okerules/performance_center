@@ -1,7 +1,9 @@
 "use client"
 
+import type React from "react"
+
 import { useState, useEffect, Fragment } from "react"
-import { ChevronDown, ChevronUp, Download, Filter, X } from "lucide-react"
+import { ChevronDown, ChevronUp, Download, Filter, X, ArrowUp, ArrowDown } from "lucide-react"
 import { Card, CardContent } from "@/components/ui/card"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
@@ -20,6 +22,23 @@ const unbounded = Unbounded({
   weight: ["400", "700"],
   display: "swap",
 })
+
+// Define sort types for different columns
+type SortColumn =
+  | "name"
+  | "category"
+  | "rating"
+  | "expenseGross"
+  | "expenseNet"
+  | "ytd"
+  | "year1"
+  | "year3"
+  | "year5"
+  | "year10"
+  | "sinceInception"
+
+// Update the SortDirection type to include "none"
+type SortDirection = "asc" | "desc" | "none"
 
 // Mock data structure for footnotes that would come from a CMS
 const footnotes = [
@@ -316,6 +335,27 @@ const morningstarCategoryOptions = [
 ]
 const portfolioManagerOptions = ["All", "John Smith", "Jane Doe", "Robert Johnson", "Emily Williams"]
 
+// Type for flattened fund data for easier sorting
+interface FlattenedFund {
+  id: number
+  categoryId: number
+  categoryName: string
+  name: string
+  number: string
+  footnotes?: number[]
+  portfolioManagers: string[]
+  category: string
+  rating: number
+  expenseGross: number
+  expenseNet: number
+  ytd: number
+  year1: number
+  year3: number
+  year5: number
+  year10: number
+  sinceInception: number
+}
+
 export default function PerformanceCenter() {
   const [categories, setCategories] = useState(assetCategories)
   const [filteredCategories, setFilteredCategories] = useState(assetCategories)
@@ -328,6 +368,14 @@ export default function PerformanceCenter() {
   // Table visibility state
   const [showStandardized, setShowStandardized] = useState(true)
   const [showNonStandardized, setShowNonStandardized] = useState(true)
+
+  // Sorting state
+  const [sortColumn, setSortColumn] = useState<SortColumn | null>(null)
+  const [sortDirection, setSortDirection] = useState<SortDirection>("asc")
+  const [standardizedSortColumn, setStandardizedSortColumn] = useState<SortColumn | null>(null)
+  const [standardizedSortDirection, setStandardizedSortDirection] = useState<SortDirection>("asc")
+  const [nonStandardizedSortColumn, setNonStandardizedSortColumn] = useState<SortColumn | null>(null)
+  const [nonStandardizedSortDirection, setNonStandardizedSortDirection] = useState<SortDirection>("asc")
 
   // Track which footnotes are actually used in the filtered data
   const [activeFootnotes, setActiveFootnotes] = useState<number[]>([])
@@ -348,6 +396,113 @@ export default function PerformanceCenter() {
     setMorningstarCategoryFilter("All")
     setMorningstarRatingFilter("all")
     setPortfolioManagerFilter("All")
+  }
+
+  // Update the handleSort function to implement three-state sorting
+  const handleSort = (column: SortColumn, isStandardized: boolean) => {
+    // Determine which sort state to update based on table type
+    const currentSortColumn = isStandardized ? standardizedSortColumn : nonStandardizedSortColumn
+    const currentSortDirection = isStandardized ? standardizedSortDirection : nonStandardizedSortDirection
+
+    // Implement three-state sorting logic
+    let newDirection: SortDirection = "asc"
+    if (currentSortColumn === column) {
+      if (currentSortDirection === "asc") {
+        newDirection = "desc"
+      } else if (currentSortDirection === "desc") {
+        newDirection = "none"
+      } else {
+        newDirection = "asc"
+      }
+    }
+
+    // Update the appropriate sort state
+    if (isStandardized) {
+      setStandardizedSortColumn(newDirection === "none" ? null : column)
+      setStandardizedSortDirection(newDirection)
+    } else {
+      setNonStandardizedSortColumn(newDirection === "none" ? null : column)
+      setNonStandardizedSortDirection(newDirection)
+    }
+  }
+
+  // Function to flatten and sort funds
+  const getSortedFunds = (
+    categories: typeof assetCategories,
+    column: SortColumn | null,
+    direction: SortDirection,
+    isStandardized: boolean,
+  ): FlattenedFund[] => {
+    // If no sort column is selected, return the original order
+    if (!column) {
+      return categories.flatMap((category) =>
+        category.funds.map((fund) => ({
+          id: fund.id,
+          categoryId: category.id,
+          categoryName: category.name,
+          name: fund.name,
+          number: fund.number,
+          footnotes: fund.footnotes,
+          portfolioManagers: fund.portfolioManagers,
+          category: fund.morningStar.category,
+          rating: fund.morningStar.rating,
+          expenseGross: fund.expense.gross,
+          expenseNet: fund.expense.net,
+          ytd: isStandardized ? fund.standardizedReturns.ytd : fund.nonStandardizedReturns.ytd,
+          year1: isStandardized ? fund.standardizedReturns.year1 : fund.nonStandardizedReturns.year1,
+          year3: isStandardized ? fund.standardizedReturns.year3 : fund.nonStandardizedReturns.year3,
+          year5: isStandardized ? fund.standardizedReturns.year5 : fund.nonStandardizedReturns.year5,
+          year10: isStandardized ? fund.standardizedReturns.year10 : fund.nonStandardizedReturns.year10,
+          sinceInception: isStandardized
+            ? fund.standardizedReturns.sinceInception
+            : fund.nonStandardizedReturns.sinceInception,
+        })),
+      )
+    }
+
+    // Flatten the funds for sorting
+    const flattenedFunds = categories.flatMap((category) =>
+      category.funds.map((fund) => ({
+        id: fund.id,
+        categoryId: category.id,
+        categoryName: category.name,
+        name: fund.name,
+        number: fund.number,
+        footnotes: fund.footnotes,
+        portfolioManagers: fund.portfolioManagers,
+        category: fund.morningStar.category,
+        rating: fund.morningStar.rating,
+        expenseGross: fund.expense.gross,
+        expenseNet: fund.expense.net,
+        ytd: isStandardized ? fund.standardizedReturns.ytd : fund.nonStandardizedReturns.ytd,
+        year1: isStandardized ? fund.standardizedReturns.year1 : fund.nonStandardizedReturns.year1,
+        year3: isStandardized ? fund.standardizedReturns.year3 : fund.nonStandardizedReturns.year3,
+        year5: isStandardized ? fund.standardizedReturns.year5 : fund.nonStandardizedReturns.year5,
+        year10: isStandardized ? fund.standardizedReturns.year10 : fund.nonStandardizedReturns.year10,
+        sinceInception: isStandardized
+          ? fund.standardizedReturns.sinceInception
+          : fund.nonStandardizedReturns.sinceInception,
+      })),
+    )
+
+    // Sort the flattened funds
+    return flattenedFunds.sort((a, b) => {
+      let aValue = a[column]
+      let bValue = b[column]
+
+      // Handle string comparisons (case-insensitive)
+      if (typeof aValue === "string" && typeof bValue === "string") {
+        aValue = aValue.toLowerCase()
+        bValue = bValue.toLowerCase()
+      }
+
+      // Compare values based on direction
+      if (direction === "asc") {
+        return aValue > bValue ? 1 : aValue < bValue ? -1 : 0
+      } else {
+        return aValue < bValue ? 1 : aValue > bValue ? -1 : 0
+      }
+    })
   }
 
   useEffect(() => {
@@ -534,12 +689,88 @@ export default function PerformanceCenter() {
     )
   }
 
+  // Update the renderSortIndicator function to handle the "none" state
+  const renderSortIndicator = (column: SortColumn, isStandardized: boolean) => {
+    const currentSortColumn = isStandardized ? standardizedSortColumn : nonStandardizedSortColumn
+    const currentSortDirection = isStandardized ? standardizedSortDirection : nonStandardizedSortDirection
+
+    if (currentSortColumn !== column) {
+      return <span className="text-transparent ml-1 h-4 w-4 inline opacity-0 group-hover:opacity-30">•</span>
+    }
+
+    if (currentSortDirection === "asc") {
+      return <ArrowUp className="ml-1 h-4 w-4 inline" aria-hidden="true" />
+    } else if (currentSortDirection === "desc") {
+      return <ArrowDown className="ml-1 h-4 w-4 inline" aria-hidden="true" />
+    }
+
+    return null
+  }
+
+  // Update the renderSortableHeader function to include group hover state
+  const renderSortableHeader = (
+    column: SortColumn,
+    label: string,
+    isStandardized: boolean,
+    className?: string,
+    children?: React.ReactNode,
+  ) => {
+    const currentSortColumn = isStandardized ? standardizedSortColumn : nonStandardizedSortColumn
+    const currentSortDirection = isStandardized ? standardizedSortDirection : nonStandardizedSortDirection
+    const isActive = currentSortColumn === column
+
+    return (
+      <TableHead
+        scope="col"
+        className={cn("cursor-pointer hover:bg-muted/30 transition-colors group", isActive && "bg-muted/40", className)}
+        onClick={() => handleSort(column, isStandardized)}
+        aria-sort={
+          isActive
+            ? currentSortDirection === "asc"
+              ? "ascending"
+              : currentSortDirection === "desc"
+                ? "descending"
+                : "none"
+            : "none"
+        }
+      >
+        <div className="flex items-center justify-between">
+          <span>{label}</span>
+          <span className="inline-flex items-center">{renderSortIndicator(column, isStandardized)}</span>
+        </div>
+        {children}
+      </TableHead>
+    )
+  }
+
   // Function to render a performance table
   const renderPerformanceTable = (isStandardized: boolean) => {
     const tableId = isStandardized ? "standardized-returns-table" : "non-standardized-returns-table"
     const tableTitle = isStandardized
       ? "Standardized Returns (Including Surrender Charges)"
       : "Non-Standardized Returns (Excluding Surrender Charges)"
+
+    // Get the current sort column and direction for this table
+    const currentSortColumn = isStandardized ? standardizedSortColumn : nonStandardizedSortColumn
+    const currentSortDirection = isStandardized ? standardizedSortDirection : nonStandardizedSortDirection
+
+    // Get sorted funds if a sort column is selected
+    const sortedFunds = getSortedFunds(filteredCategories, currentSortColumn, currentSortDirection, isStandardized)
+
+    // Group sorted funds by category
+    const groupedFunds: Record<number, FlattenedFund[]> = {}
+    sortedFunds.forEach((fund) => {
+      if (!groupedFunds[fund.categoryId]) {
+        groupedFunds[fund.categoryId] = []
+      }
+      groupedFunds[fund.categoryId].push(fund)
+    })
+
+    // Create sorted categories with their funds
+    const sortedCategories = filteredCategories.map((category) => ({
+      ...category,
+      funds: groupedFunds[category.id] || [],
+    }))
 
     return (
       <section className="mb-8" aria-labelledby={`${tableId}-heading`}>
@@ -551,28 +782,29 @@ export default function PerformanceCenter() {
             <Table className="border w-full" aria-labelledby={`${tableId}-heading`}>
               <TableHeader>
                 <TableRow className="bg-muted/50">
-                  <TableHead className="w-[250px]" scope="col">
-                    Sub-Account
-                  </TableHead>
-                  <TableHead scope="col">Morningstar Category</TableHead>
-                  <TableHead scope="col">Morningstar Rating</TableHead>
-                  <TableHead scope="col">
-                    <div>Expense Ratio</div>
+                  {renderSortableHeader("name", "Sub-Account", isStandardized, "w-[250px]")}
+                  {renderSortableHeader("category", "Morningstar Category", isStandardized)}
+                  {renderSortableHeader("rating", "Morningstar Rating", isStandardized)}
+                  {renderSortableHeader(
+                    "expenseGross",
+                    "Expense Ratio",
+                    isStandardized,
+                    undefined,
                     <div className="flex text-xs font-normal">
                       <span className="w-1/2">Gross</span>
                       <span className="w-1/2">Net</span>
-                    </div>
-                  </TableHead>
-                  <TableHead scope="col">YTD Return</TableHead>
-                  <TableHead scope="col">1-Year</TableHead>
-                  <TableHead scope="col">3-Year</TableHead>
-                  <TableHead scope="col">5-Year</TableHead>
-                  <TableHead scope="col">10-Year</TableHead>
-                  <TableHead scope="col">Since Inception</TableHead>
+                    </div>,
+                  )}
+                  {renderSortableHeader("ytd", "YTD Return", isStandardized)}
+                  {renderSortableHeader("year1", "1-Year", isStandardized)}
+                  {renderSortableHeader("year3", "3-Year", isStandardized)}
+                  {renderSortableHeader("year5", "5-Year", isStandardized)}
+                  {renderSortableHeader("year10", "10-Year", isStandardized)}
+                  {renderSortableHeader("sinceInception", "Since Inception", isStandardized)}
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {filteredCategories.map((category) => (
+                {sortedCategories.map((category) => (
                   <Fragment key={`category-${category.id}`}>
                     <TableRow
                       className="bg-muted/20 cursor-pointer hover:bg-muted/30"
@@ -601,72 +833,55 @@ export default function PerformanceCenter() {
                       </tr>
                     )}
                     {category.expanded &&
-                      category.funds.map((fund) => (
-                        <TableRow key={`fund-${fund.id}`} aria-labelledby={`category-${category.id}-content`}>
-                          <TableCell>
-                            <div className="font-medium">
-                              {fund.name}
-                              {fund.footnotes && renderFootnotes(fund.footnotes)}
-                              {/* Screen reader accessible footnotes */}
-                              {fund.footnotes && (
-                                <span className="sr-only">
-                                  {" "}
-                                  with footnotes{" "}
-                                  {fund.footnotes.map((id) => {
-                                    const note = footnotes.find((f) => f.id === id)
-                                    return note ? `${id}: ${note.text}. ` : ""
-                                  })}
-                                </span>
-                              )}
-                            </div>
-                            <div className="text-xs text-muted-foreground">Fund Number: {fund.number}</div>
-                          </TableCell>
-                          <TableCell>{fund.morningStar.category}</TableCell>
-                          <TableCell>
-                            <div aria-label={`${fund.morningStar.rating} out of 5 stars`}>
-                              <StarRating rating={fund.morningStar.rating} />
-                            </div>
-                          </TableCell>
-                          <TableCell>
-                            <div className="flex text-sm">
-                              <span className="w-1/2">{fund.expense.gross}%</span>
-                              <span className="w-1/2">{fund.expense.net}%</span>
-                            </div>
-                          </TableCell>
-                          <TableCell>
-                            {formatPercent(
-                              isStandardized ? fund.standardizedReturns.ytd : fund.nonStandardizedReturns.ytd,
-                            )}
-                          </TableCell>
-                          <TableCell>
-                            {formatPercent(
-                              isStandardized ? fund.standardizedReturns.year1 : fund.nonStandardizedReturns.year1,
-                            )}
-                          </TableCell>
-                          <TableCell>
-                            {formatPercent(
-                              isStandardized ? fund.standardizedReturns.year3 : fund.nonStandardizedReturns.year3,
-                            )}
-                          </TableCell>
-                          <TableCell>
-                            {formatPercent(
-                              isStandardized ? fund.standardizedReturns.year5 : fund.nonStandardizedReturns.year5,
-                            )}
-                          </TableCell>
-                          <TableCell>
-                            {formatPercent(
-                              isStandardized ? fund.standardizedReturns.year10 : fund.nonStandardizedReturns.year10,
-                            )}
-                          </TableCell>
-                          <TableCell>
-                            {formatPercent(
-                              isStandardized
-                                ? fund.standardizedReturns.sinceInception
-                                : fund.nonStandardizedReturns.sinceInception,
-                            )}
-                          </TableCell>
-                        </TableRow>
-                      ))}
+                      category.funds.map((fund) => {
+                        // Find the original fund to get all data
+                        const originalFund = assetCategories
+                          .find((c) => c.id === fund.categoryId)
+                          ?.funds.find((f) => f.id === fund.id)
+
+                        if (!originalFund) return null
+
+                        return (
+                          <TableRow key={`fund-${fund.id}`} aria-labelledby={`category-${category.id}-content`}>
+                            <TableCell>
+                              <div className="font-medium">
+                                {fund.name}
+                                {fund.footnotes && renderFootnotes(fund.footnotes)}
+                                {/* Screen reader accessible footnotes */}
+                                {fund.footnotes && (
+                                  <span className="sr-only">
+                                    {" "}
+                                    with footnotes{" "}
+                                    {fund.footnotes.map((id) => {
+                                      const note = footnotes.find((f) => f.id === id)
+                                      return note ? `${id}: ${note.text}. ` : ""
+                                    })}
+                                  </span>
+                                )}
+                              </div>
+                              <div className="text-xs text-muted-foreground">Fund Number: {fund.number}</div>
+                            </TableCell>
+                            <TableCell>{fund.category}</TableCell>
+                            <TableCell>
+                              <div aria-label={`${fund.rating} out of 5 stars`}>
+                                <StarRating rating={fund.rating} />
+                              </div>
+                            </TableCell>
+                            <TableCell>
+                              <div className="flex text-sm">
+                                <span className="w-1/2">{fund.expenseGross}%</span>
+                                <span className="w-1/2">{fund.expenseNet}%</span>
+                              </div>
+                            </TableCell>
+                            <TableCell>{formatPercent(fund.ytd)}</TableCell>
+                            <TableCell>{formatPercent(fund.year1)}</TableCell>
+                            <TableCell>{formatPercent(fund.year3)}</TableCell>
+                            <TableCell>{formatPercent(fund.year5)}</TableCell>
+                            <TableCell>{formatPercent(fund.year10)}</TableCell>
+                            <TableCell>{formatPercent(fund.sinceInception)}</TableCell>
+                          </TableRow>
+                        )
+                      })}
                   </Fragment>
                 ))}
               </TableBody>
