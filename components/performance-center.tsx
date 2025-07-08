@@ -900,7 +900,7 @@ export default function PerformanceCenter() {
       <div className="w-full mb-6 py-4 sm:py-6 px-4 bg-[#1e3869] rounded-md">
         <h1
           id="performance-center-title"
-          className={`text-2xl sm:text-3xl font-bold text-[#f06d22] text-center md:text-left ${unbounded.className}`}
+          className={`text-2xl sm:text-3xl font-bold text-white text-center md:text-left ${unbounded.className}`}
         >
           Performance Center
         </h1>
@@ -1061,7 +1061,7 @@ export default function PerformanceCenter() {
                   variant="outline"
                   size="sm"
                   onClick={resetFilters}
-                  className="text-sm"
+                  className="text-sm bg-transparent"
                   aria-label="Reset all filters"
                 >
                   Reset Filters
